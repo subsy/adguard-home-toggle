@@ -13,57 +13,21 @@ Originally inspired by the [Raycast AdGuard Home extension](https://www.raycast.
 - **Open web UI** in your default browser
 - **Status polling** in tray mode keeps the icon in sync with server state
 
-## Dependencies
-
-### Build dependencies
-
-- Rust toolchain (1.85+, edition 2024)
-- `pkg-config`
-- GTK4 development libraries
-- `gtk4-layer-shell` development libraries
-- D-Bus development libraries (for `ksni` / system tray)
-
-### Arch Linux
-
-```sh
-sudo pacman -S gtk4 gtk4-layer-shell dbus
-```
-
-### Ubuntu / Debian
-
-```sh
-sudo apt install libgtk-4-dev libgtk4-layer-shell-dev libdbus-1-dev pkg-config
-```
-
-### Fedora
-
-```sh
-sudo dnf install gtk4-devel gtk4-layer-shell-devel dbus-devel pkg-config
-```
-
 ## Installation
 
-### From source
+### Arch Linux (AUR)
 
 ```sh
-git clone https://github.com/subsy/adguard-home-toggle.git
-cd adguard-home-toggle
-cargo build --release
+yay -S adguard-home-toggle
 ```
 
-The binary is at `target/release/adguard-toggle`. Copy it somewhere on your `$PATH`:
+### Cargo
 
 ```sh
-cp target/release/adguard-toggle ~/.local/bin/
+cargo install adguard-home-toggle
 ```
 
-Or install directly via cargo:
-
-```sh
-cargo install --path .
-```
-
-Icons are embedded in the binary (rendered from SVG via resvg at runtime), so no separate icon installation is needed.
+> Requires GTK4, gtk4-layer-shell, and D-Bus libraries. See [Dependencies](#dependencies) below.
 
 ## Configuration
 
@@ -142,7 +106,41 @@ The tray polls the AdGuard Home API every 10 seconds to stay in sync with change
 
 When you toggle or snooze protection via the CLI, a translucent overlay appears centered on screen for 1.5 seconds showing the shield icon and new status. This uses GTK4 layer-shell, so it works on Wayland compositors that support `wlr-layer-shell-unstable-v1` (Niri, Sway, Hyprland, etc.).
 
-## Project structure
+## Development
+
+### Dependencies
+
+Icons are embedded in the binary (rendered from SVG via resvg at runtime), so no separate icon installation is needed.
+
+#### Arch Linux
+
+```sh
+sudo pacman -S gtk4 gtk4-layer-shell dbus
+```
+
+#### Ubuntu / Debian
+
+```sh
+sudo apt install libgtk-4-dev libgtk4-layer-shell-dev libdbus-1-dev pkg-config
+```
+
+#### Fedora
+
+```sh
+sudo dnf install gtk4-devel gtk4-layer-shell-devel dbus-devel pkg-config
+```
+
+### Building from source
+
+```sh
+git clone https://github.com/subsy/adguard-home-toggle.git
+cd adguard-home-toggle
+cargo build --release
+```
+
+The binary is at `target/release/adguard-toggle`.
+
+### Project structure
 
 ```
 src/
@@ -154,7 +152,7 @@ src/
 └── tray.rs      # SNI system tray (ksni)
 ```
 
-## AdGuard Home API
+### AdGuard Home API
 
 This tool uses the following AdGuard Home API endpoints:
 
