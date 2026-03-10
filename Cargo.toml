@@ -2,6 +2,14 @@
 name = "adguard-home-toggle"
 version = "0.1.0"
 edition = "2024"
+authors = ["plgeek"]
+description = "CLI and system tray tool to control AdGuard Home protection on Linux"
+license = "MIT"
+repository = "https://github.com/subsy/adguard-home-toggle"
+homepage = "https://github.com/subsy/adguard-home-toggle"
+keywords = ["adguard", "dns", "tray", "wayland", "linux"]
+categories = ["command-line-utilities"]
+readme = "README.md"
 
 [[bin]]
 name = "adguard-toggle"
