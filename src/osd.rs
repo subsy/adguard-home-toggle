@@ -1,17 +1,8 @@
+use crate::icons;
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Align, Application, ApplicationWindow, CssProvider, Label, Box as GtkBox, Orientation};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
-
-const SHIELD_ON_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <path d="M32 4L8 14v16c0 14.8 10.24 28.64 24 32 13.76-3.36 24-17.2 24-32V14L32 4z" fill="#4ade80" stroke="#22c55e" stroke-width="1.5"/>
-  <path d="M24 33l6 6 12-12" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>"##;
-
-const SHIELD_OFF_SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <path d="M32 4L8 14v16c0 14.8 10.24 28.64 24 32 13.76-3.36 24-17.2 24-32V14L32 4z" fill="none" stroke="#64748b" stroke-width="2.5"/>
-  <path d="M24 24l16 16M40 24l-16 16" fill="none" stroke="#64748b" stroke-width="4" stroke-linecap="round"/>
-</svg>"##;
 
 const CSS: &str = "
 window {
@@ -70,7 +61,7 @@ pub fn show(enabled: bool, subtitle: &str) {
         container.set_halign(Align::Center);
         container.set_valign(Align::Center);
 
-        let svg_data = if enabled { SHIELD_ON_SVG } else { SHIELD_OFF_SVG };
+        let svg_data = if enabled { icons::shield_on_svg() } else { icons::shield_off_svg() };
         let stream = gtk4::gio::MemoryInputStream::from_bytes(&glib::Bytes::from(svg_data.as_bytes()));
         if let Ok(pixbuf) = gtk4::gdk_pixbuf::Pixbuf::from_stream(&stream, gtk4::gio::Cancellable::NONE) {
             let texture = gtk4::gdk::Texture::for_pixbuf(&pixbuf);

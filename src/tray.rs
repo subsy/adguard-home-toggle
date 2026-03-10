@@ -1,8 +1,8 @@
 use crate::api::AdGuardClient;
 use crate::config::Config;
+use crate::icons;
 use ksni::menu::StandardItem;
-use ksni::{MenuItem, Tray, TrayService};
-use std::path::PathBuf;
+use ksni::{Icon, MenuItem, Tray, TrayService};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -10,7 +10,8 @@ use std::time::Duration;
 struct AdGuardTray {
     protected: Arc<Mutex<bool>>,
     config: Arc<Config>,
-    icon_dir: String,
+    icon_on: Vec<Icon>,
+    icon_off: Vec<Icon>,
 }
 
 impl Tray for AdGuardTray {
@@ -18,16 +19,12 @@ impl Tray for AdGuardTray {
         "adguard-home-toggle".to_string()
     }
 
-    fn icon_theme_path(&self) -> String {
-        self.icon_dir.clone()
-    }
-
-    fn icon_name(&self) -> String {
+    fn icon_pixmap(&self) -> Vec<Icon> {
         let protected = *self.protected.lock().unwrap();
         if protected {
-            "adguard-shield-on".to_string()
+            self.icon_on.clone()
         } else {
-            "adguard-shield-off".to_string()
+            self.icon_off.clone()
         }
     }
 
@@ -152,24 +149,22 @@ fn notify_status(enabled: bool, snooze_label: Option<&str>) {
     let _ = notify_rust::Notification::new()
         .summary(&summary)
         .body(&body)
-        .icon(if enabled { "adguard-shield-on" } else { "adguard-shield-off" })
         .timeout(3000)
         .show();
 }
 
-fn find_icon_dir() -> String {
-    // Check installed location first, then fall back to next to the binary
-    let candidates = [
-        dirs::data_dir().map(|d| d.join("adguard-home-toggle/icons")),
-        std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("icons"))),
-        Some(PathBuf::from("icons")),
-    ];
-    for candidate in candidates.iter().flatten() {
-        if candidate.join("hicolor/scalable/apps/adguard-shield-on.svg").exists() {
-            return candidate.to_string_lossy().to_string();
-        }
-    }
-    "icons".to_string()
+fn render_icon(svg: &str) -> Vec<Icon> {
+    // Render at multiple sizes for different DPI displays
+    [24, 32, 48, 64]
+        .iter()
+        .filter_map(|&size| {
+            icons::render_svg_to_argb(svg, size).map(|(w, h, data)| Icon {
+                width: w,
+                height: h,
+                data,
+            })
+        })
+        .collect()
 }
 
 pub fn run_tray() -> Result<(), String> {
@@ -178,12 +173,18 @@ pub fn run_tray() -> Result<(), String> {
     let status = client.get_status()?;
     let protected = Arc::new(Mutex::new(status.protection_enabled));
 
-    let icon_dir = find_icon_dir();
+    let icon_on = render_icon(icons::shield_on_svg());
+    let icon_off = render_icon(icons::shield_off_svg());
+
+    if icon_on.is_empty() || icon_off.is_empty() {
+        return Err("Failed to render tray icons".to_string());
+    }
 
     let tray = AdGuardTray {
         protected: protected.clone(),
         config: config.clone(),
-        icon_dir,
+        icon_on,
+        icon_off,
     };
 
     let service = TrayService::new(tray);

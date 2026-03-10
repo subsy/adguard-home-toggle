@@ -63,20 +63,7 @@ Or install directly via cargo:
 cargo install --path .
 ```
 
-### Install icons
-
-The shield icons need to be installed for the system tray and OSD to display them:
-
-```sh
-# For the system tray (custom icon theme path)
-mkdir -p ~/.local/share/adguard-home-toggle/icons/hicolor/scalable/apps
-cp icons/hicolor/scalable/apps/*.svg ~/.local/share/adguard-home-toggle/icons/hicolor/scalable/apps/
-
-# For notifications and general icon lookup
-mkdir -p ~/.local/share/icons/hicolor/scalable/apps
-cp icons/hicolor/scalable/apps/*.svg ~/.local/share/icons/hicolor/scalable/apps/
-gtk-update-icon-cache -f ~/.local/share/icons/hicolor/
-```
+Icons are embedded in the binary (rendered from SVG via resvg at runtime), so no separate icon installation is needed.
 
 ## Configuration
 
@@ -162,12 +149,9 @@ src/
 ├── main.rs      # CLI entry point (clap)
 ├── api.rs       # AdGuard Home HTTP API client
 ├── config.rs    # TOML config loader
+├── icons.rs     # Embedded SVG icons + resvg ARGB32 renderer
 ├── osd.rs       # GTK4 layer-shell OSD overlay
 └── tray.rs      # SNI system tray (ksni)
-icons/
-└── hicolor/scalable/apps/
-    ├── adguard-shield-on.svg
-    └── adguard-shield-off.svg
 ```
 
 ## AdGuard Home API

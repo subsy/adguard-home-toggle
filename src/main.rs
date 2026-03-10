@@ -1,5 +1,6 @@
 mod api;
 mod config;
+mod icons;
 mod osd;
 mod tray;
 
