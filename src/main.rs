@@ -79,6 +79,7 @@ fn main() {
                 client.set_protection(new_state)?;
                 let label = if new_state { "ENABLED" } else { "DISABLED" };
                 println!("Protection: {label}");
+                tray::signal_tray_refresh();
                 osd::show(
                     new_state,
                     if new_state { "DNS filtering is active" } else { "DNS filtering is off" },
@@ -88,6 +89,7 @@ fn main() {
                 let ms = parse_duration(&duration)?;
                 client.snooze(ms)?;
                 println!("Protection snoozed for {duration}");
+                tray::signal_tray_refresh();
                 osd::show(false, &format!("Snoozed for {duration}"));
             }
             Commands::Open => {

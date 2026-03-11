@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::icons;
 use ksni::menu::StandardItem;
 use ksni::{Icon, MenuItem, Tray, TrayService};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -190,11 +191,27 @@ pub fn run_tray() -> Result<(), String> {
     let service = TrayService::new(tray);
     let handle = service.handle();
 
+    // Write PID file so CLI can signal us
+    let pid_path = pid_file_path();
+    let _ = std::fs::create_dir_all(pid_path.parent().unwrap());
+    let _ = std::fs::write(&pid_path, std::process::id().to_string());
+
+    // Set up SIGUSR1 handler to trigger immediate refresh
+    unsafe {
+        libc::signal(libc::SIGUSR1, sigusr1_handler as *const () as libc::sighandler_t);
+    }
+
     let poll_config = config.clone();
     let poll_protected = protected.clone();
     thread::spawn(move || {
         loop {
-            thread::sleep(Duration::from_secs(10));
+            // Check every 500ms if we got a signal, full poll every 10s
+            for _ in 0..20 {
+                thread::sleep(Duration::from_millis(500));
+                if SIGUSR1_FLAG.swap(false, Ordering::AcqRel) {
+                    break;
+                }
+            }
             let client = AdGuardClient::new(&poll_config);
             if let Ok(status) = client.get_status() {
                 let mut p = poll_protected.lock().unwrap();
@@ -206,6 +223,30 @@ pub fn run_tray() -> Result<(), String> {
         }
     });
 
-    service.run().map_err(|e| format!("Tray service failed: {e}"))?;
-    Ok(())
+    let result = service.run().map_err(|e| format!("Tray service failed: {e}"));
+    let _ = std::fs::remove_file(&pid_path);
+    result
+}
+
+static SIGUSR1_FLAG: AtomicBool = AtomicBool::new(false);
+
+extern "C" fn sigusr1_handler(_sig: libc::c_int) {
+    SIGUSR1_FLAG.store(true, Ordering::Release);
+}
+
+pub fn pid_file_path() -> std::path::PathBuf {
+    dirs::runtime_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
+        .join("adguard-toggle.pid")
+}
+
+pub fn signal_tray_refresh() {
+    let pid_path = pid_file_path();
+    if let Ok(pid_str) = std::fs::read_to_string(&pid_path) {
+        if let Ok(pid) = pid_str.trim().parse::<i32>() {
+            unsafe {
+                libc::kill(pid, libc::SIGUSR1);
+            }
+        }
+    }
 }
