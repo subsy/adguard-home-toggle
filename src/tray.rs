@@ -205,13 +205,25 @@ pub fn run_tray() -> Result<(), String> {
     let poll_protected = protected.clone();
     thread::spawn(move || {
         loop {
-            // Check every 500ms if we got a signal, full poll every 10s
-            for _ in 0..20 {
-                thread::sleep(Duration::from_millis(500));
+            // Check every 100ms if we got a signal, full poll every 10s
+            for _ in 0..100 {
+                thread::sleep(Duration::from_millis(100));
                 if SIGUSR1_FLAG.swap(false, Ordering::AcqRel) {
+                    // Optimistically apply the state the CLI wrote
+                    if let Ok(state) = std::fs::read_to_string(state_file_path()) {
+                        let new_state = state.trim() == "1";
+                        let mut p = poll_protected.lock().unwrap();
+                        if *p != new_state {
+                            *p = new_state;
+                            handle.update(|_| {});
+                        }
+                    }
+                    // Verify against the server shortly after
+                    thread::sleep(Duration::from_secs(1));
                     break;
                 }
             }
+            // Sync with actual server state
             let client = AdGuardClient::new(&poll_config);
             if let Ok(status) = client.get_status() {
                 let mut p = poll_protected.lock().unwrap();
@@ -240,7 +252,15 @@ pub fn pid_file_path() -> std::path::PathBuf {
         .join("adguard-toggle.pid")
 }
 
-pub fn signal_tray_refresh() {
+pub fn state_file_path() -> std::path::PathBuf {
+    dirs::runtime_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
+        .join("adguard-toggle.state")
+}
+
+pub fn signal_tray_refresh(protection_enabled: bool) {
+    // Write the new state so the tray can read it without an API call
+    let _ = std::fs::write(state_file_path(), if protection_enabled { "1" } else { "0" });
     let pid_path = pid_file_path();
     if let Ok(pid_str) = std::fs::read_to_string(&pid_path) {
         if let Ok(pid) = pid_str.trim().parse::<i32>() {
